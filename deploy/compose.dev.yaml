@@ -1,15 +1,16 @@
 # Dev/demo stack: RTMon + the Archify sidecar.
 #
-# Both images are built per-branch by the 'dev image' workflows and pulled
-# from ghcr.io/groundsada - nothing is published to the shared
-# sdnsense/sense-rtmon namespace, and nothing here touches prod.
+# Both images are pulled from ghcr.io/groundsada - nothing is published to the
+# shared sdnsense/sense-rtmon namespace, and nothing here touches prod.
+#   rtmon:      ghcr.io/groundsada/sense-rtmon:archify-dev  (amd64, from the
+#               groundsada/sense-rtmon archify-sidecar branch)
+#   sidecar:    ghcr.io/groundsada/rtmon-archify:archify-dev (multi-arch)
 #
-# Before starting:
-#   cp deploy/.env.example .env            # set ARCHIFY_TOKEN (must match
-#                                          # the one in rtmon.dev.yaml)
-#   put your dev sense-o-auth.yaml next to rtmon.dev.yaml (or edit the mount)
-#   cp deploy/rtmon.dev.yaml rtmon.yaml    # fill in your Grafana / SENSE facts
-#
+# Before starting (from this repo root):
+#   cp deploy/.env.example .env               # set ARCHIFY_TOKEN
+#   cp deploy/rtmon.dev.yaml rtmon.yaml       # fill in Grafana/SENSE facts
+#   # put your dev sense-o-auth.yaml + hostcert/hostkey.pem in deploy/
+#   #   (they are not committed to any repo, on purpose)
 #   docker compose -f deploy/compose.dev.yaml up -d
 #   docker compose -f deploy/compose.dev.yaml logs -f rtmon
 #
@@ -33,6 +34,7 @@ services:
       - ./sense-o-auth-prod.yaml:/etc/sense-o-auth-prod.yaml:ro
       - ./hostcert.pem:/etc/grid-security/hostcert.pem:ro
       - ./hostkey.pem:/etc/grid-security/hostkey.pem:ro
+      - ./templates:/etc/rtmon/templates:ro
       - rtmon-work:/srv
     ports:
       - "8000:8000"

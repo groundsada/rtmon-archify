@@ -2,29 +2,34 @@
 
 The dev stack is two containers on one compose network: RTMon
 (`ghcr.io/groundsada/sense-rtmon:archify-dev`, built from the
-`groundsada/sense-rtmon` branch) and this sidecar
-(`ghcr.io/groundsada/rtmon-archify:archify-dev`).
+`groundsada/sense-rtmon` `archify-sidecar` branch) and this sidecar
+(`ghcr.io/groundsada/rtmon-archify:archify-dev`, multi-arch).
 
-## Build the images (once per branch change)
+## Images
 
-Both are built by `workflow_dispatch` workflows, with the same rolling tag:
+Pushed to ghcr already. Rebuild per branch change with the workflows:
 
-- RTMon image: push the branch to `groundsada/sense-rtmon`, then run the
-  **"RTMon dev image"** workflow in that fork with `buildtag: archify-dev`.
-  The workflow builds from that branch (`RTMON_REF`) and pushes
-  `ghcr.io/groundsada/sense-rtmon:archify-dev`.
-- Sidecar image: run the **"rtmon-archify image"** workflow in this repo with
-  `buildtag: archify-dev`.
+- RTMon image: `"RTMon dev image"` in `groundsada/sense-rtmon` (buildtag
+  `archify-dev`). The workflow builds from the branch that ran it
+  (`RTMON_REF`) - so create the branch, push it, then dispatch. Dockerfile
+  defaults remain `esnet/sense-rtmon@master` for upstream/production.
+- Sidecar image: `"rtmon-archify image"` in this repo (buildtag `archify-dev`).
 
-## Run
+> Note: `workflow_dispatch` can only be triggered for workflows that exist on
+> the default branch. Until the branch/PR is merged, build locally with
+> `docker buildx build --platform linux/amd64 --push ...` (sidecar) or `docker
+> build --build-arg RTMON_REPO=...` (RTMon) instead.
+
+## Run (from this repo root)
 
 ```sh
-cp .env.example .env                     # set ARCHIFY_TOKEN
-cp rtmon.dev.yaml rtmon.yaml             # fill in Grafana/SENSE facts
-# put dev sense-o-auth.yaml + hostcert/hostkey.pem beside rtmon.yaml, or
-# edit the mounts in compose.dev.yaml
-docker compose -f compose.dev.yaml up -d
-docker compose -f compose.dev.yaml logs -f rtmon
+cp deploy/.env.example .env             # set ARCHIFY_TOKEN
+cp deploy/rtmon.dev.yaml rtmon.yaml     # fill in Grafana/SENSE facts
+mkdir -p deploy/templates
+# put dev sense-o-auth.yaml + hostcert/hostkey.pem in deploy/, and copy the
+# dashboard templates RTMon ships (src/templates/*) into deploy/templates/
+docker compose -f deploy/compose.dev.yaml up -d
+docker compose -f deploy/compose.dev.yaml logs -f rtmon
 ```
 
 ## Wiring
@@ -41,8 +46,19 @@ RTMon :8000 -> http://archify:8080 POST /v1/render (Bearer $ARCHIFY_TOKEN)
 - Grafana must set `disable_sanitize_html = true` (or
   `GF_PANELS_DISABLE_SANITIZE_HTML=true`) or the iframe is stripped.
 
-## Current gaps (not in the stack yet)
+## Auth files
 
-- No Grafana in this compose (mount a `grafana.ini`/env if the demo needs it).
-- `rtmon.yaml` mounts assume the three auth/cred files sit next to the compose
-  file; they are not committed to any repo on purpose.
+`sense-o-auth.yaml`, `sense-o-auth-prod.yaml`, `hostcert.pem`, `hostkey.pem`
+and `templates/` are **not committed** (they hold credentials/api keys and the
+templates ship in the RTMon image; only mount `templates/` if you need to
+override). Copy your copies into `deploy/` before `up`.
+
+## What a "run" produces
+
+- RTMon daemon: `http://localhost:8000` - SENSE-O polling + Grafana API.
+- Sidecar: `http://localhost:8080` - serves artifacts at
+  `/diagrams/<uid>.html`; `curl http://localhost:8080/healthz` should return
+  `{"ok":true,...}`.
+- Grafana: a dashboard with the Archify panel. No Grafana container here -
+  point an existing dev Grafana at `http://localhost:8080` via
+  `diagram_url_base` if you use one.
