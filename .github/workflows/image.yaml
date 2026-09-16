@@ -1,0 +1,43 @@
+# Build the rtmon-archify sidecar image and push it to ghcr.io/groundsada,
+# with the same dated-tag + rolling-tag pattern the RTMon instances use.
+name: rtmon-archify image
+
+on:
+  workflow_dispatch:
+    inputs:
+      buildtag:
+        description: "Image tag (e.g. archify-dev)"
+        required: true
+        type: string
+  push:
+    branches: [main]
+    tags: ["v*"]
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Log in to ghcr
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        env:
+          BUILD_TAG: ${{ github.event.inputs.buildtag || 'main' }}
+        run: |
+          docker build --platform linux/amd64 \
+            -t "ghcr.io/groundsada/rtmon-archify:${BUILD_TAG}-$(date +%Y%m%d)" .
+          docker push "ghcr.io/groundsada/rtmon-archify:${BUILD_TAG}-$(date +%Y%m%d)"
+          docker tag "ghcr.io/groundsada/rtmon-archify:${BUILD_TAG}-$(date +%Y%m%d)" "ghcr.io/groundsada/rtmon-archify:${BUILD_TAG}"
+          docker push "ghcr.io/groundsada/rtmon-archify:${BUILD_TAG}"

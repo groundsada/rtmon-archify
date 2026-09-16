@@ -1,0 +1,57 @@
+# Dev/demo stack: RTMon + the Archify sidecar.
+#
+# Both images are built per-branch by the 'dev image' workflows and pulled
+# from ghcr.io/groundsada - nothing is published to the shared
+# sdnsense/sense-rtmon namespace, and nothing here touches prod.
+#
+# Before starting:
+#   cp deploy/.env.example .env            # set ARCHIFY_TOKEN (must match
+#                                          # the one in rtmon.dev.yaml)
+#   put your dev sense-o-auth.yaml next to rtmon.dev.yaml (or edit the mount)
+#   cp deploy/rtmon.dev.yaml rtmon.yaml    # fill in your Grafana / SENSE facts
+#
+#   docker compose -f deploy/compose.dev.yaml up -d
+#   docker compose -f deploy/compose.dev.yaml logs -f rtmon
+#
+# The dashboard iframe points at diagram_url_base, which is whatever URL a
+# browser reaches the sidecar on. For a laptop demo that is usually
+# http://localhost:8080; for a remotely hosted Grafana it needs a public
+# route (see deploy/README.md).
+name: rtmon-archify-dev
+
+services:
+  rtmon:
+    image: ghcr.io/groundsada/sense-rtmon:archify-dev
+    depends_on:
+      - archify
+    environment:
+      # Container-to-container, same compose network.
+      ARCHIFY_SIDECAR_URL: http://archify:8080
+    volumes:
+      - ./rtmon.yaml:/etc/rtmon.yaml:ro
+      - ./sense-o-auth.yaml:/etc/sense-o-auth.yaml:ro
+      - ./sense-o-auth-prod.yaml:/etc/sense-o-auth-prod.yaml:ro
+      - ./hostcert.pem:/etc/grid-security/hostcert.pem:ro
+      - ./hostkey.pem:/etc/grid-security/hostkey.pem:ro
+      - rtmon-work:/srv
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  archify:
+    image: ghcr.io/groundsada/rtmon-archify:archify-dev
+    environment:
+      # Same value as archify.token in rtmon.yaml. Without it the sidecar
+      # answers 503 on every write, so the panel is skipped with a warning
+      # (the failure budget still holds; the RTMon image is unaffected).
+      ARCHIFY_TOKEN: ${ARCHIFY_TOKEN:-dev-secret-change-me}
+      ARCHIFY_DIAGRAM_DIR: /srv/diagrams
+    volumes:
+      - archify-diagrams:/srv/diagrams
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+volumes:
+  archify-diagrams:
+  rtmon-work:

@@ -1,0 +1,33 @@
+# RTMon config for a dev/demo instance with the Archify sidecar.
+#
+# This is the same file the fork ships; only the two Archify keys differ from
+# the prod template. Copy to ./rtmon.yaml next to the compose file, then fill
+# in the Grafana/SENSE/Prometheus REPLACEME values. Keep archify.token in
+# sync with ARCHIFY_TOKEN in .env.
+grafana_host: "https://REPLACEME"
+grafana_api_key: REPLACEME
+grafana_folder: "Real Time Mon"
+grafana_dev: "mfsada-archify-demo"
+
+# For a laptop demo this is http://localhost:8080; if Grafana is elsewhere
+# (or the browser is on another host) it must be a route the browser reaches.
+topdiagrams: Both
+archify:
+  sidecar_url: "http://archify:8080"
+  token: "${ARCHIFY_TOKEN:-dev-secret-change-me}"
+  diagram_url_base: "http://localhost:8080"
+  quality: "standard"
+  max_fix_rounds: 3
+  render_timeout: 60
+
+senseo_assignee: "rtmon.instance-manager"
+sense_endpoints:
+  "sense-o-dev.es.net": "/etc/sense-o-auth.yaml"
+
+prometheus_url: REPLACEME
+prometheus_username: REPLACEME
+prometheus_password: REPLACEME
+
+override_url: "https://raw.githubusercontent.com/esnet/sense-rtmon/master/autogole-api/packaging/files/etc/overrides.yaml"
+hostcert: "/etc/grid-security/hostcert.pem"
+hostkey: "/etc/grid-security/hostkey.pem"
