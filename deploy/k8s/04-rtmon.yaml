@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rtmon-archify-dev
+  namespace: mfsada
+  labels:
+    app: rtmon-archify-dev
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: rtmon-archify-dev
+  template:
+    metadata:
+      labels:
+        app: rtmon-archify-dev
+    spec:
+      imagePullSecrets:
+        - name: rtmon-ghcr
+      containers:
+        - name: rtmon
+          image: ghcr.io/groundsada/sense-rtmon:archify-dev
+          imagePullPolicy: Always
+          env:
+            - name: SENSE_FULL_DEBUG
+              value: "true"
+          ports:
+            - name: http
+              containerPort: 8000
+          livenessProbe:
+            exec:
+              command: [RTMon-Health, --mode, liveness]
+            initialDelaySeconds: 120
+            periodSeconds: 60
+          readinessProbe:
+            exec:
+              command: [RTMon-Health, --mode, readiness]
+            initialDelaySeconds: 60
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 2Gi
+          volumeMounts:
+            - name: config
+              mountPath: /etc/rtmon.yaml
+              subPath: rtmon-yaml
+            - name: config
+              mountPath: /etc/sense-o-auth.yaml
+              subPath: sense-o-auth-dev-yaml
+            - name: clientcert
+              mountPath: /etc/grid-security/hostcert.pem
+              subPath: tls.crt
+            - name: clientcert
+              mountPath: /etc/grid-security/hostkey.pem
+              subPath: tls.key
+            - name: work
+              mountPath: /srv
+      volumes:
+        - name: config
+          secret:
+            secretName: rtmon-archify-config
+        - name: clientcert
+          secret:
+            secretName: rtmon-client-cert
+        - name: work
+          persistentVolumeClaim:
+            claimName: pvc-rtmon-archify-dev

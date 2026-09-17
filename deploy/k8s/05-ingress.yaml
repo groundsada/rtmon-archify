@@ -1,0 +1,30 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: rtmon-archify
+  namespace: mfsada
+  labels:
+    app: rtmon-archify-sidecar
+spec:
+  ingressClassName: haproxy
+  rules:
+    - host: mfsada-rtmon-archify.nrp-nautilus.io
+      http:
+        paths:
+          - path: /diagrams
+            pathType: Prefix
+            backend:
+              service:
+                name: rtmon-archify-sidecar
+                port:
+                  number: 8080
+          - path: /healthz
+            pathType: Exact
+            backend:
+              service:
+                name: rtmon-archify-sidecar
+                port:
+                  number: 8080
+  tls:
+    - hosts:
+        - mfsada-rtmon-archify.nrp-nautilus.io

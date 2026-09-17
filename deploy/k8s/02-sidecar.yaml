@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rtmon-archify-sidecar
+  namespace: mfsada
+  labels:
+    app: rtmon-archify-sidecar
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: rtmon-archify-sidecar
+  template:
+    metadata:
+      labels:
+        app: rtmon-archify-sidecar
+    spec:
+      containers:
+        - name: sidecar
+          image: ghcr.io/groundsada/rtmon-archify:archify-dev
+          imagePullPolicy: Always
+          env:
+            - name: ARCHIFY_DIAGRAM_DIR
+              value: /srv/diagrams
+            - name: ARCHIFY_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: rtmon-archify-auth
+                  key: archify-token
+          ports:
+            - name: http
+              containerPort: 8080
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+      volumes:
+        - name: diagrams
+          persistentVolumeClaim:
+            claimName: pvc-rtmon-archify-sidecar
