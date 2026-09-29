@@ -22,6 +22,13 @@ spec:
           image: ghcr.io/groundsada/rtmon-archify:archify-dev
           imagePullPolicy: Always
           env:
+            # Explicit rather than relying on the image default, so the port
+            # is pinned by the manifest that also declares containerPort and
+            # the Service. 8081 because RTMon's own results API (RTMon-Http,
+            # http_api_port) defaults to 8080 and a sidecar in the same pod
+            # would collide with it.
+            - name: ARCHIFY_PORT
+              value: "8081"
             - name: ARCHIFY_DIAGRAM_DIR
               value: /srv/diagrams
             - name: ARCHIFY_TOKEN
