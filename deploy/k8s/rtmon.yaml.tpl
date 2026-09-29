@@ -37,7 +37,10 @@ topdiagrams: Both
 archify:
   sidecar_url: http://rtmon-archify-sidecar:8081
   token: __ARCHIFY_TOKEN__
-  diagram_url_base: https://mfsada-rtmon-archify.nrp-nautilus.io
+  # Must include the /diagrams segment. RTMon appends only "<uid>.html", so a
+  # base without it points the panel iframe at the ingress root, which 404s and
+  # shows an empty panel with nothing logged - the render succeeds either way.
+  diagram_url_base: https://mfsada-rtmon-archify.nrp-nautilus.io/diagrams
   quality: standard
   max_fix_rounds: 3
   render_timeout: 60

@@ -41,8 +41,11 @@ RTMon :8000 -> http://archify:8081 POST /v1/render (Bearer $ARCHIFY_TOKEN)
 ```
 
 - `archify.sidecar_url` is container-internal (`http://archify:8081`).
-- `archify.diagram_url_base` is what the **browser** reaches: `http://localhost:8081`
-  for local demo, or a public route if Grafana is remote.
+- `archify.diagram_url_base` is what the **browser** reaches, including the
+  `/diagrams` segment: `http://localhost:8081/diagrams` for a local demo, or a
+  public route if Grafana is remote. RTMon appends only `<uid>.html`, so
+  omitting `/diagrams` yields an iframe that 404s while the render still
+  reports success.
 - Grafana must set `disable_sanitize_html = true` (or
   `GF_PANELS_DISABLE_SANITIZE_HTML=true`) or the iframe is stripped.
 

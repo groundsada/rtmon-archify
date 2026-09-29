@@ -26,7 +26,22 @@ Wiring: RTMon → `http://rtmon-archify-sidecar:8081` (POST /v1/render, Bearer);
 browser/demo → `https://mfsada-rtmon-archify.nrp-nautilus.io/diagrams/<uid>.html`
 (or `/healthz`). Dashboards write to `mfsada-sense-grafana.nrp-nautilus.io`
 in folder `Real Time Mon - mfsada-archify`. Grafana there must have
-`GF_PANELS_DISABLE_SANITIZE_HTML=true` for the iframe to render.
+`GF_PANELS_DISABLE_SANITIZE_HTML=true` for the iframe to render — set on
+`deploy/sense-grafana` with `kubectl -n mfsada set env deploy/sense-grafana
+GF_PANELS_DISABLE_SANITIZE_HTML=true`.
+
+**`mfsada/sense-grafana` stores nothing.** Its `/var/lib/grafana` is the
+container filesystem, not a PVC, so `grafana.db` dies with the pod. Any change
+that restarts it (an env var, a new image) therefore **destroys the API key**
+and RTMon starts getting 401s on every Grafana call. Fix: re-run
+`setup-secrets.sh` (it re-mints the key) then
+`kubectl -n mfsada rollout restart deploy/rtmon-archify-dev`. The six `DMM — *`
+dashboards survive because they are provisioned from the `grafana-dashboards`
+configmap; anything RTMon created does not.
+
+`rtmon-east-test` writes to a **different** Grafana
+(`autogole-grafana.nrp-nautilus.io`, `grafana_dev: mfsada-test`), so restarting
+`sense-grafana` does not affect it.
 
 ## Bootstrap
 
@@ -57,7 +72,16 @@ then RTMon picks it up on its 30s poll and the sidecar renders the Archify panel
 
 - **`UUID does not match`**: two instances own the same deployment name. Verify
   rtmon.yaml `grafana_dev` is set (so folder is `Real Time Mon - mfsada-archify`,
-  not bare `Real Time Mon`).
+  not bare `Real Time Mon`). One of these on the **first cycle after a restart**
+  is normal and self-heals: the previous pod's registration is still in SENSE-O's
+  database, and the next cycle logs `Metadata is older than 2 minutes ... Taking
+  over.` Only a *persistent* mismatch is a real conflict.
+- **`SENSE-O returned N tasks ..., none for deployment Real Time Mon -
+  mfsada-archify. Deployments seen: ['Real Time Mon']`**: not an error. The
+  instance is registered and polling correctly; no task has been assigned to it
+  yet. See "Assign a reservation" above.
+- **Grafana 401 / `Loaded 0 dashboards`**: the Grafana pod restarted and took the
+  API key with it. See the ephemeral-storage note above.
 - **`Could not sweep Archify artifacts: unauthorized`**: sidecar token vs
   rtmon.yaml token mismatch. Regenerate/restart both after a secret change
   (setup-secrets.sh reuses the token; just restart the sidecar).
