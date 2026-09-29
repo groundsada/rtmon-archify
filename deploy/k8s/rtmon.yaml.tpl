@@ -35,7 +35,7 @@ hostkey: /etc/grid-security/hostkey.pem
 # The Archify topology diagram, served by the sidecar on this pod.
 topdiagrams: Both
 archify:
-  sidecar_url: http://rtmon-archify-sidecar:8080
+  sidecar_url: http://rtmon-archify-sidecar:8081
   token: __ARCHIFY_TOKEN__
   diagram_url_base: https://mfsada-rtmon-archify.nrp-nautilus.io
   quality: standard

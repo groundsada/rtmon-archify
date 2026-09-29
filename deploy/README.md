@@ -35,13 +35,13 @@ docker compose -f deploy/compose.dev.yaml logs -f rtmon
 ## Wiring
 
 ```
-browser -> Grafana (text panel iframe)           browser -> :8080 (sidecar)
+browser -> Grafana (text panel iframe)           browser -> :8081 (sidecar)
 Grafana icon -> RTMon API :8000 (registry/API)
-RTMon :8000 -> http://archify:8080 POST /v1/render (Bearer $ARCHIFY_TOKEN)
+RTMon :8000 -> http://archify:8081 POST /v1/render (Bearer $ARCHIFY_TOKEN)
 ```
 
-- `archify.sidecar_url` is container-internal (`http://archify:8080`).
-- `archify.diagram_url_base` is what the **browser** reaches: `http://localhost:8080`
+- `archify.sidecar_url` is container-internal (`http://archify:8081`).
+- `archify.diagram_url_base` is what the **browser** reaches: `http://localhost:8081`
   for local demo, or a public route if Grafana is remote.
 - Grafana must set `disable_sanitize_html = true` (or
   `GF_PANELS_DISABLE_SANITIZE_HTML=true`) or the iframe is stripped.
@@ -56,9 +56,9 @@ override). Copy your copies into `deploy/` before `up`.
 ## What a "run" produces
 
 - RTMon daemon: `http://localhost:8000` - SENSE-O polling + Grafana API.
-- Sidecar: `http://localhost:8080` - serves artifacts at
-  `/diagrams/<uid>.html`; `curl http://localhost:8080/healthz` should return
+- Sidecar: `http://localhost:8081` - serves artifacts at
+  `/diagrams/<uid>.html`; `curl http://localhost:8081/healthz` should return
   `{"ok":true,...}`.
 - Grafana: a dashboard with the Archify panel. No Grafana container here -
-  point an existing dev Grafana at `http://localhost:8080` via
+  point an existing dev Grafana at `http://localhost:8081` via
   `diagram_url_base` if you use one.

@@ -9,9 +9,9 @@ the shared Grafana or with the east instances.
 
 ```
 browser (demo) ── ingress https://mfsada-rtmon-archify.nrp-nautilus.io
-                     ├── /diagrams/* ──> sidecar svc :8080 (GET only)
-                     └── /healthz    ──> sidecar svc :8080
-RTMon pod ──> http://rtmon-archify-sidecar:8080 (POST /v1/render, Bearer token)
+                     ├── /diagrams/* ──> sidecar svc :8081 (GET only)
+                     └── /healthz    ──> sidecar svc :8081
+RTMon pod ──> http://rtmon-archify-sidecar:8081 (POST /v1/render, Bearer token)
 ```
 
 ## Files
@@ -20,7 +20,7 @@ RTMon pod ──> http://rtmon-archify-sidecar:8080 (POST /v1/render, Bearer tok
 |---|---|
 | `01-pvc.yaml` | RTMon `/srv` volume |
 | `02-sidecar.yaml` | sidecar Deployment (ghcr.io/groundsada/rtmon-archify:archify-dev) |
-| `03-sidecar-svc.yaml` | ClusterIP service, port 8080 |
+| `03-sidecar-svc.yaml` | ClusterIP service, port 8081 |
 | `04-rtmon.yaml` | RTMon Deployment (ghcr.io/groundsada/sense-rtmon:archify-dev) |
 | `05-ingress.yaml` | haproxy ingress, `/diagrams/` + `/healthz` only |
 | `setup-secrets.sh` | creates all Secrets (no credentials in this repo) |
@@ -51,7 +51,7 @@ kubectl -n mfsada get deploy,pods -w
 
 ```sh
 # sidecar is up and authenticates writes
-kubectl -n mfsada exec deploy/rtmon-archify-sidecar -- wget -qO- http://127.0.0.1:8080/healthz
+kubectl -n mfsada exec deploy/rtmon-archify-sidecar -- wget -qO- http://127.0.0.1:8081/healthz
 # RTMon is polling/rendering (watch for archify lines)
 kubectl -n mfsada logs deploy/rtmon-archify-dev -f
 # the panel URL once a dashboard exists:

@@ -33,16 +33,21 @@ DELETE /api/v1/artifacts/<uid>                                 (auth)
 ```sh
 ARCHIFY_TOKEN=<shared-secret> node server.mjs
 # or
-docker run -d -p 8080:8080 \
+docker run -d -p 8081:8081 \
   -e ARCHIFY_TOKEN=<shared-secret> \
   -v rtmon-diagrams:/srv/diagrams \
   groundsada/rtmon-archify:latest
 ```
 
 Environment:
-`ARCHIFY_PORT` (8080), `ARCHIFY_BIND` (0.0.0.0), `ARCHIFY_TOKEN` (unset =
+`ARCHIFY_PORT` (8081), `ARCHIFY_BIND` (0.0.0.0), `ARCHIFY_TOKEN` (unset =
 write endpoints closed), `ARCHIFY_DIAGRAM_DIR` (/srv/diagrams),
 `ARCHIFY_CLI` (archify-cli/bin/archify.mjs), `ARCHIFY_QUALITY` (standard).
+
+**8081, not 8080.** RTMon's own results API (`RTMon-Http`, `http_api_port`)
+defaults to 8080, and a sidecar shares the pod's network namespace with it, so
+the two cannot both have that port. Moving this needs `archify.sidecar_url` in
+`rtmon.yaml` moved with it.
 
 ## RTMon side
 
@@ -50,7 +55,7 @@ In `rtmon.yaml`:
 
 ```yaml
 archify:
-  sidecar_url: http://127.0.0.1:8080   # rtmon -> sidecar, same pod
+  sidecar_url: http://127.0.0.1:8081   # rtmon -> sidecar, same pod
   token: <shared-secret>
   diagram_url_base: https://rtmon.example/diagrams   # browser -> sidecar
 ```

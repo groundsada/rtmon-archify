@@ -17,14 +17,14 @@ spec:
               service:
                 name: rtmon-archify-sidecar
                 port:
-                  number: 8080
+                  number: 8081
           - path: /healthz
             pathType: Exact
             backend:
               service:
                 name: rtmon-archify-sidecar
                 port:
-                  number: 8080
+                  number: 8081
   tls:
     - hosts:
         - mfsada-rtmon-archify.nrp-nautilus.io

@@ -9,13 +9,13 @@ grafana_api_key: REPLACEME
 grafana_folder: "Real Time Mon"
 grafana_dev: "mfsada-archify-demo"
 
-# For a laptop demo this is http://localhost:8080; if Grafana is elsewhere
+# For a laptop demo this is http://localhost:8081; if Grafana is elsewhere
 # (or the browser is on another host) it must be a route the browser reaches.
 topdiagrams: Both
 archify:
-  sidecar_url: "http://archify:8080"
+  sidecar_url: "http://archify:8081"
   token: "${ARCHIFY_TOKEN:-dev-secret-change-me}"
-  diagram_url_base: "http://localhost:8080"
+  diagram_url_base: "http://localhost:8081"
   quality: "standard"
   max_fix_rounds: 3
   render_timeout: 60

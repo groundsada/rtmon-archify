@@ -16,13 +16,13 @@ expected.
 NAMESPACE  mfsada
   deploy/  rtmon-archify-dev       (RTMon, ghcr.io/groundsada/sense-rtmon:archify-dev)
            rtmon-archify-sidecar   (ghcr.io/groundsada/rtmon-archify:archify-dev)
-  svc/     rtmon-archify-sidecar   (ClusterIP 8080)
+  svc/     rtmon-archify-sidecar   (ClusterIP 8081)
   ingress/ rtmon-archify           (haproxy, mfsada-rtmon-archify.nrp-nautilus.io)
   pvc/     pvc-rtmon-archify-dev, pvc-rtmon-archify-sidecar
   secret/  rtmon-ghcr (pull), rtmon-archify-auth (token), rtmon-archify-config (rtmon.yaml + dev auth)
 ```
 
-Wiring: RTMon → `http://rtmon-archify-sidecar:8080` (POST /v1/render, Bearer);
+Wiring: RTMon → `http://rtmon-archify-sidecar:8081` (POST /v1/render, Bearer);
 browser/demo → `https://mfsada-rtmon-archify.nrp-nautilus.io/diagrams/<uid>.html`
 (or `/healthz`). Dashboards write to `mfsada-sense-grafana.nrp-nautilus.io`
 in folder `Real Time Mon - mfsada-archify`. Grafana there must have
@@ -41,8 +41,8 @@ kubectl apply -f 01-pvc.yaml -f 02-sidecar.yaml -f 03-sidecar-svc.yaml \
 
 ```sh
 kubectl -n mfsada get deploy rtmon-archify-dev rtmon-archify-sidecar   # both 1/1
-kubectl -n mfsada exec deploy/rtmon-archify-sidecar -- wget -qO- http://127.0.0.1:8080/healthz
-kubectl -n mfsada exec deploy/rtmon-archify-dev -- curl -s -m5 http://rtmon-archify-sidecar:8080/healthz
+kubectl -n mfsada exec deploy/rtmon-archify-sidecar -- wget -qO- http://127.0.0.1:8081/healthz
+kubectl -n mfsada exec deploy/rtmon-archify-dev -- curl -s -m5 http://rtmon-archify-sidecar:8081/healthz
 # expect: {"ok":true,"version":"2.17.0-dev.1"}
 kubectl -n mfsada logs deploy/rtmon-archify-dev --tail=100 | grep -E "sweep|render|Archify|task|deployment"
 ```

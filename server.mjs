@@ -393,7 +393,10 @@ function createServer(config = {}) {
 
 
 function main() {
-  const port = Number(process.env.ARCHIFY_PORT || 8080);
+  // 8081, not 8080: RTMon's own results API (RTMon-Http, http_api_port)
+  // defaults to 8080, and a sidecar shares the pod's network namespace with
+  // it, so the two cannot both have that port.
+  const port = Number(process.env.ARCHIFY_PORT || 8081);
   const bind = process.env.ARCHIFY_BIND || '0.0.0.0';
   const token = process.env.ARCHIFY_TOKEN || '';
   const server = createServer({});
