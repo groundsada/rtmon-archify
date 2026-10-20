@@ -96,6 +96,24 @@ describe('render', () => {
     assert.ok(html.trimEnd().endsWith('-->'), 'notice ends the file');
   });
 
+  it('folds the diagram chrome behind one toggle', async () => {
+    const raw = fs.readFileSync(path.join(dir, `${UID}.html.gz`));
+    const html = zlib.gunzipSync(raw).toString('utf8');
+    assert.ok(html.includes('rtmon-chrome-toggle'), 'toggle injected');
+    assert.ok(html.includes('dataset.rtmonChrome="hidden"'), 'starts collapsed');
+    // The three control clusters the collapse covers. If the renderer ever
+    // renames one of these, the toggle silently stops hiding it and the panel
+    // goes back to sixteen buttons, so the selectors are asserted against the
+    // rendered artifact rather than trusted.
+    for (const cls of ['toolbar', 'guided-views', 'diagram-nav']) {
+      assert.ok(html.includes(`html[data-rtmon-chrome="hidden"] .${cls}`)
+        || html.includes(`.${cls} {`) || html.includes(`class="${cls}`)
+        || html.includes(`"${cls}"`), `${cls} present in artifact`);
+    }
+    assert.ok(html.indexOf('rtmon-chrome-toggle') < html.indexOf('Rendered by Archify'),
+      'toggle precedes the licence notice');
+  });
+
   it('serves it gzipped with the same cache contract as before', async () => {
     const res = await request('GET', `/diagrams/${UID}.html`);
     assert.equal(res.status, 200);

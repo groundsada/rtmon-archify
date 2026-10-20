@@ -42,7 +42,31 @@ docker run -d -p 8081:8081 \
 Environment:
 `ARCHIFY_PORT` (8081), `ARCHIFY_BIND` (0.0.0.0), `ARCHIFY_TOKEN` (unset =
 write endpoints closed), `ARCHIFY_DIAGRAM_DIR` (/srv/diagrams),
-`ARCHIFY_CLI` (archify-entry.mjs), `ARCHIFY_QUALITY` (standard).
+`ARCHIFY_CLI` (archify-entry.mjs), `ARCHIFY_QUALITY` (standard),
+`ARCHIFY_CHROME` (hidden).
+
+## Diagram chrome
+
+A rendered artifact arrives with sixteen controls: four in the toolbar
+(theme, preset, present, export), four guided-view buttons, and eight on the
+diagram nav (path, map, lens, zoom). In a Grafana panel that reads as a tool
+with a diagram in it rather than a diagram, so the sidecar folds them behind a
+single **Controls** button and puts everything one click away.
+
+`ARCHIFY_CHROME`:
+
+| | |
+|---|---|
+| `hidden` (default) | collapsed on arrival, one toggle in the toolbar |
+| `shown` | toggle present, everything expanded on arrival |
+| `off` | inject nothing; the artifact is exactly what the renderer produced |
+
+This is appended after `</html>`, like the attribution and for the same
+reason: `archify-cli/` is vendored upstream code and is not edited here. The
+collapse is driven by one `data-rtmon-chrome` attribute on `<html>` rather
+than by setting `display` on the controls, so once they are visible the
+diagram's own logic still owns them. The licence notice stays last in the
+file.
 
 **8081, not 8080.** RTMon's own results API (`RTMon-Http`, `http_api_port`)
 defaults to 8080, and a sidecar shares the pod's network namespace with it, so

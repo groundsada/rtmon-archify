@@ -78,6 +78,65 @@ The embedded JetBrains Mono subset is under the SIL Open Font License 1.1;
 its text is carried in the font CSS above.
 -->\n`);
 
+// The artifact ships sixteen controls on arrival - four in the toolbar, four
+// guided-view buttons, eight on the diagram nav. On a Grafana dashboard the
+// panel is a diagram first and a tool second, so they start folded behind one
+// button and everything is one click away.
+//
+// Appended rather than rendered, for the same reason the attribution is: the
+// renderer is vendored upstream code and is not edited here. The toggle goes
+// *inside* .toolbar so it inherits the artifact's own button styling and
+// cannot overlap the controls it reveals, and the collapse is driven by one
+// attribute on <html> rather than by setting display on the elements, so the
+// diagram's own show/hide logic still owns them once they are visible.
+const CHROME_TOGGLE = Buffer.from(`
+<style>
+html[data-rtmon-chrome="hidden"] .toolbar > *:not(.rtmon-chrome-toggle),
+html[data-rtmon-chrome="hidden"] .guided-views,
+html[data-rtmon-chrome="hidden"] .diagram-nav { display: none !important; }
+.rtmon-chrome-toggle { cursor: pointer; }
+@media print { .rtmon-chrome-toggle { display: none !important; } }
+</style>
+<script>
+(function () {
+  var root = document.documentElement;
+  if (root.dataset.rtmonChrome === 'off') return;
+  var START = root.dataset.rtmonChrome || 'hidden';
+  var tries = 0;
+  function mount() {
+    var bar = document.querySelector('.toolbar');
+    // The toolbar is built by the artifact's own script, so it may not exist
+    // on the first frame. Give up quietly rather than leave a dead observer:
+    // no toggle just means the controls stay visible, which is the old
+    // behaviour and not a broken panel.
+    if (!bar) { if (++tries < 60) requestAnimationFrame(mount); return; }
+    if (bar.querySelector('.rtmon-chrome-toggle')) return;
+    root.dataset.rtmonChrome = START;
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'rtmon-chrome-toggle';
+    function sync() {
+      var hidden = root.dataset.rtmonChrome === 'hidden';
+      btn.textContent = hidden ? 'Controls' : 'Hide controls';
+      btn.setAttribute('aria-expanded', hidden ? 'false' : 'true');
+      btn.setAttribute('aria-label', hidden ? 'Show diagram controls' : 'Hide diagram controls');
+    }
+    btn.addEventListener('click', function () {
+      root.dataset.rtmonChrome = root.dataset.rtmonChrome === 'hidden' ? 'shown' : 'hidden';
+      sync();
+    });
+    sync();
+    bar.insertBefore(btn, bar.firstChild);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', mount);
+  } else {
+    mount();
+  }
+})();
+</script>
+`);
+
 
 function json(res, code, body) {
   const payload = Buffer.from(JSON.stringify(body));
@@ -137,11 +196,27 @@ class Archive {
    * The artifact store. One directory; the uid is the only thing that ever
    * becomes part of a filename, and only after UID_RE has accepted it.
    */
-  constructor(dir, cli, quality) {
+  constructor(dir, cli, quality, chrome) {
     this.dir = dir;
     this.cli = cli;
     this.quality = quality; // request value wins; this is the default
+    // hidden (default) | shown | off. "off" appends nothing at all, so an
+    // artifact is exactly what the renderer produced.
+    this.chrome = ['hidden', 'shown', 'off'].includes(chrome) ? chrome : 'hidden';
     fs.mkdirSync(dir, { recursive: true });
+  }
+
+  _trailer() {
+    if (this.chrome === 'off') return [ATTRIBUTION];
+    // The start state rides on <html> so the toggle script reads it rather
+    // than this server having to template the script itself.
+    const start = Buffer.from(
+      `\n<script>document.documentElement.dataset.rtmonChrome=${JSON.stringify(this.chrome)}</script>\n`,
+    );
+    // Attribution stays last. The licence notice ending the file is a posture
+    // this repo takes deliberately and a test asserts, so the toggle goes
+    // ahead of it rather than after.
+    return [start, CHROME_TOGGLE, ATTRIBUTION];
   }
 
   _name(uid) {
@@ -197,7 +272,7 @@ class Archive {
         return { ok: false, diagnostics: [], error };
       }
       const gz = zlib.gzipSync(
-        Buffer.concat([fs.readFileSync(htmlPath), ATTRIBUTION]),
+        Buffer.concat([fs.readFileSync(htmlPath), ...this._trailer()]),
         { level: 9 },
       );
       const tmpOut = this._tmpName(uid);
@@ -291,7 +366,8 @@ function createServer(config = {}) {
   const token = config.token !== undefined ? config.token : process.env.ARCHIFY_TOKEN || '';
   const cli = config.cli || process.env.ARCHIFY_CLI || path.join(__dirname, 'archify-entry.mjs');
   const quality = config.quality || process.env.ARCHIFY_QUALITY || 'standard';
-  const archive = new Archive(directory, cli, quality);
+  const chrome = config.chrome || process.env.ARCHIFY_CHROME || 'hidden';
+  const archive = new Archive(directory, cli, quality, chrome);
 
   function authorized(req) {
     if (!token) return null; // not configured: writers are closed, see main()
