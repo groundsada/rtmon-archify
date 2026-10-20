@@ -4,7 +4,7 @@
 FROM node:22-alpine
 
 WORKDIR /app
-COPY package.json server.mjs ./
+COPY package.json server.mjs archify-entry.mjs ./
 COPY archify-cli ./archify-cli
 
 # Archify needs the version file relative to its own tree and nothing else;

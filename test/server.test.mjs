@@ -29,7 +29,7 @@ before(async () => {
   server = createServer({
     diagramDir: dir,
     token: TOKEN,
-    cli: path.join(ROOT, 'archify-cli', 'bin', 'archify.mjs'),
+    cli: path.join(ROOT, 'archify-entry.mjs'),
   });
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   base = `http://127.0.0.1:${server.address().port}`;
@@ -202,7 +202,7 @@ describe('tokenless mode', () => {
   before(async () => {
     tokenless = createServer({
       diagramDir: fs.mkdtempSync(path.join(os.tmpdir(), 'rtmon-archify-notoken-')),
-      cli: path.join(ROOT, 'archify-cli', 'bin', 'archify.mjs'),
+      cli: path.join(ROOT, 'archify-entry.mjs'),
     });
     await new Promise((resolve) => tokenless.listen(0, '127.0.0.1', resolve));
     tokenlessBase = `http://127.0.0.1:${tokenless.address().port}`;

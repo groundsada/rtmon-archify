@@ -289,7 +289,7 @@ class Archive {
 function createServer(config = {}) {
   const directory = config.diagramDir || process.env.ARCHIFY_DIAGRAM_DIR || '/srv/diagrams';
   const token = config.token !== undefined ? config.token : process.env.ARCHIFY_TOKEN || '';
-  const cli = config.cli || process.env.ARCHIFY_CLI || path.join(__dirname, 'archify-cli', 'bin', 'archify.mjs');
+  const cli = config.cli || process.env.ARCHIFY_CLI || path.join(__dirname, 'archify-entry.mjs');
   const quality = config.quality || process.env.ARCHIFY_QUALITY || 'standard';
   const archive = new Archive(directory, cli, quality);
 

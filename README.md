@@ -42,7 +42,7 @@ docker run -d -p 8081:8081 \
 Environment:
 `ARCHIFY_PORT` (8081), `ARCHIFY_BIND` (0.0.0.0), `ARCHIFY_TOKEN` (unset =
 write endpoints closed), `ARCHIFY_DIAGRAM_DIR` (/srv/diagrams),
-`ARCHIFY_CLI` (archify-cli/bin/archify.mjs), `ARCHIFY_QUALITY` (standard).
+`ARCHIFY_CLI` (archify-entry.mjs), `ARCHIFY_QUALITY` (standard).
 
 **8081, not 8080.** RTMon's own results API (`RTMon-Http`, `http_api_port`)
 defaults to 8080, and a sidecar shares the pod's network namespace with it, so
@@ -66,24 +66,57 @@ entirely this repo's; RTMon ships no Archify code and no Node.
 
 ## Vendoring archify-cli
 
-`archify-cli/` is copied verbatim from upstream. It must not be edited,
-linted or reformatted; fixes go upstream and come back as a re-vendor plus a
-`VERSION` bump.
+Upstream Archify renders five diagram types behind fifteen subcommands. RTMon
+emits one type and the sidecar calls two subcommands, so what is vendored here
+is a **subset**, not the whole tool: the rest was code this deployment could
+not reach, and unreachable code is still code someone has to read, license and
+patch.
+
+Two rules keep that honest:
+
+- **`archify-cli/` holds unmodified upstream files.** The subset is chosen by
+  which files get copied, never by editing them. They must not be edited,
+  linted or reformatted; fixes go upstream and come back as a re-vendor plus a
+  `VERSION` bump.
+- **`archify-entry.mjs` is ours.** Upstream's entry point was
+  `bin/archify.mjs`; this is that file reduced to `render` and `validate` over
+  `architecture`, which is a local edit and so lives outside the vendored tree
+  rather than pretending to be upstream.
 
 ```sh
 SRC=<checkout of archify>
 rm -rf archify-cli
-mkdir -p archify-cli/scripts
-cp -R "$SRC"/{bin,renderers,schemas,assets,delta} archify-cli/
-cp "$SRC"/{LICENSE,THIRD_PARTY_NOTICES.md} archify-cli/
+mkdir -p archify-cli/{renderers/architecture,renderers/shared,schemas,assets,scripts}
+
+# Architecture renderer and the shared modules it reaches.
+cp "$SRC"/renderers/architecture/{render-architecture,grid}.mjs archify-cli/renderers/architecture/
+cp "$SRC"/renderers/shared/*.mjs archify-cli/renderers/shared/
+# Only the architecture schema and the common definitions it $refs.
+cp "$SRC"/schemas/{architecture,common}.schema.json "$SRC"/schemas/README.md archify-cli/schemas/
+cp "$SRC"/assets/{template.html,JetBrainsMono-OFL.txt} archify-cli/assets/
+# validate spawns the artifact checker, so it is on the render path.
 cp "$SRC"/scripts/check-render-output.mjs archify-cli/scripts/
+cp "$SRC"/{LICENSE,THIRD_PARTY_NOTICES.md} archify-cli/
 printf '%s\n' <new version> > archify-cli/VERSION
+
 # Re-empty the brand catalogue; see THIRD_PARTY_NOTICES.md.
 git checkout HEAD -- archify-cli/renderers/shared/generated-brand-marks.mjs
+# Not re-vendored, because they are ours or unreachable: archify-entry.mjs,
+# bin/{preview,visual-check,open-artifact}.mjs, delta/, the workflow,
+# sequence, dataflow and lifecycle renderers and their schemas.
 ```
 
-Then re-run `npm test`, which renders the committed fixture IR through the
-vendored CLI and would catch a broken validate/render path immediately.
+`archify-cli/schemas/README.md` is vendored too, so it still documents all
+five upstream diagram types and every subcommand. That is left alone on
+purpose - it is upstream's description of upstream. Only `architecture` and
+`common` ship here, and only `render` and `validate` exist to call them.
+
+An upstream bump can add a shared module the architecture renderer now
+imports. `node --check archify-entry.mjs` will not catch that, but the test
+suite will: it renders real fixture IR through the vendored tree, so a missing
+module fails the render rather than surfacing later as a blank panel.
+
+Then re-run `npm test`.
 
 ## Test
 
